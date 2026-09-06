@@ -29,7 +29,10 @@ jobs:
           --dir release
 
       - name: Unpack the web book
-        run: unzip -q release/Agriculture-Form-Two-ADT-Web.zip -d site
+        run: |
+          unzip -q release/Agriculture-Form-Two-ADT-Web.zip -d unpacked
+          mv unpacked/adt site
+          touch site/.nojekyll
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
