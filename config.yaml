@@ -1,0 +1,4 @@
+# Agriculture Form Two: pilot configuration
+# Preserve source geometry and all source sections.
+default_render_strategy: fixed_layout
+pruned_section_types: []

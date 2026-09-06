@@ -7,3 +7,19 @@ node_modules/
 # Runtime state stays book-local; snapshot databases consistently before committing.
 *-wal
 *-shm
+
+# The published web package is a GitHub Release asset, not repository history.
+Agriculture-Form-Two-ADT-Web.zip
+
+# Rebuildable output, LLM caches, generated speech, and large visual-audit images.
+.cache/
+.fonts-cache/
+audio/
+images/
+pilot-preview/
+full-conversion/
+audit/final-comparisons/
+audit/comparisons/
+audit/full-comparisons/
+audit/full/*.png
+audit/pilot/*.png
