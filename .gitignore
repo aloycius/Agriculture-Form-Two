@@ -1,0 +1,9 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+*.log
+# Runtime state stays book-local; snapshot databases consistently before committing.
+*-wal
+*-shm

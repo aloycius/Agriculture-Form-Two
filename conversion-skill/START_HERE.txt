@@ -1,0 +1,20 @@
+ADT BOOK CONVERSION — QUICK SETUP
+
+macOS or Linux:
+
+1. Extract the ZIP.
+2. Open Terminal in the extracted adt-book-conversion folder.
+3. Run:
+
+   bash scripts/install.sh
+
+4. Answer the setup questions.
+5. Open a new terminal and run:
+
+   adt-convert
+
+The installer adds the Codex skill to ~/.codex/skills and creates the
+adt-convert terminal command. It stores directory paths only. API keys are
+read from OPENAI_API_KEY or requested with hidden input for one conversion.
+
+The recipient must have an ADT Studio checkout, Node.js 20+, and pnpm.

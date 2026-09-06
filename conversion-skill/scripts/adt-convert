@@ -1,0 +1,86 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+config_file="${XDG_CONFIG_HOME:-${HOME}/.config}/adt-book-conversion/config"
+if [[ ! -f "${config_file}" ]]; then
+  printf 'ADT conversion is not configured. Run the skill installer first:\n' >&2
+  printf '  bash <extracted-skill>/scripts/install.sh\n' >&2
+  exit 1
+fi
+
+# The installer owns this mode-0600 file and writes shell-escaped path values.
+# shellcheck disable=SC1090
+source "${config_file}"
+
+if [[ ! -d "${ADT_STUDIO_DIR}" ]] || [[ ! -f "${ADT_STUDIO_DIR}/packages/pipeline/src/cli.ts" ]]; then
+  printf 'Configured ADT Studio checkout is unavailable: %s\n' "${ADT_STUDIO_DIR}" >&2
+  exit 1
+fi
+
+read -r -p "PDF path: " pdf_path
+pdf_path="${pdf_path/#\~/${HOME}}"
+pdf_extension="$(printf '%s' "${pdf_path}" | sed -E 's/^.*\.//' | tr '[:upper:]' '[:lower:]')"
+if [[ ! -f "${pdf_path}" ]] || [[ "${pdf_extension}" != "pdf" ]]; then
+  printf 'A readable PDF file is required: %s\n' "${pdf_path}" >&2
+  exit 1
+fi
+pdf_dir="$(cd "$(dirname "${pdf_path}")" && pwd)"
+pdf_path="${pdf_dir}/$(basename "${pdf_path}")"
+
+filename="$(basename "${pdf_path}" .pdf)"
+default_label="$(printf '%s' "${filename}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+read -r -p "Book label [${default_label}]: " label
+label="${label:-${default_label}}"
+if [[ ! "${label}" =~ ^[a-z0-9][a-z0-9._-]*$ ]]; then
+  printf 'Book label must start with a lowercase letter or digit and contain only a-z, 0-9, dot, underscore, or hyphen.\n' >&2
+  exit 1
+fi
+
+read -r -p "Page range (Enter for entire book, or START-END): " page_range
+page_args=()
+if [[ -n "${page_range}" ]]; then
+  if [[ "${page_range}" =~ ^([0-9]+)-([0-9]+)$ ]] && \
+     (( BASH_REMATCH[1] > 0 && BASH_REMATCH[2] >= BASH_REMATCH[1] )); then
+    page_args=(--start-page "${BASH_REMATCH[1]}" --end-page "${BASH_REMATCH[2]}")
+  else
+    printf 'Page range must look like 1-5, with the end not before the start.\n' >&2
+    exit 1
+  fi
+fi
+
+read -r -p "Concurrency (Enter for ADT default): " concurrency
+concurrency_args=()
+if [[ -n "${concurrency}" ]]; then
+  if [[ "${concurrency}" =~ ^[1-9][0-9]*$ ]]; then
+    concurrency_args=(--concurrency "${concurrency}")
+  else
+    printf 'Concurrency must be a positive integer.\n' >&2
+    exit 1
+  fi
+fi
+
+if [[ -z "${OPENAI_API_KEY:-}" ]]; then
+  read -r -s -p "OpenAI API key (hidden; used for this run only): " OPENAI_API_KEY
+  printf '\n'
+  if [[ -z "${OPENAI_API_KEY}" ]]; then
+    printf 'An OpenAI API key is required.\n' >&2
+    exit 1
+  fi
+  export OPENAI_API_KEY
+fi
+
+printf '\nADT Studio: %s\n' "${ADT_STUDIO_DIR}"
+printf 'PDF:        %s\n' "${pdf_path}"
+printf 'Book:       %s/%s\n' "${ADT_BOOKS_DIR}" "${label}"
+if [[ -n "${page_range}" ]]; then
+  printf 'Pages:      %s\n' "${page_range}"
+else
+  printf 'Pages:      entire book\n'
+fi
+printf '\nStarting headless conversion...\n\n'
+
+cd "${ADT_STUDIO_DIR}"
+exec pnpm pipeline "${label}" "${pdf_path}" \
+  --books-dir "${ADT_BOOKS_DIR}" \
+  "${page_args[@]}" \
+  "${concurrency_args[@]}"

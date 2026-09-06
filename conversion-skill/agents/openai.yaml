@@ -1,0 +1,4 @@
+interface:
+  display_name: "ADT Book Conversion"
+  short_description: "Convert PDF books through ADT Studio headlessly"
+  default_prompt: "Use $adt-book-conversion to convert this PDF book with ADT Studio and verify the HTML output."
