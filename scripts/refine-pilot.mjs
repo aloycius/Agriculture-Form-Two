@@ -7,6 +7,29 @@ import {sectionFixedLayoutPage,renderFixedLayoutPage} from '../../../packages/pi
 import {packageAdtWeb} from '../../../packages/pipeline/src/packaging/web.ts';
 import {ensureBookGoogleFontsCached} from '../../../packages/pipeline/src/fonts-bundle.ts';
 const root=process.env.CONVERSION_ROOT??'books/agriculture-form-two/pilot-preview';
+// Source-backed heading leaves identified by the complete-book semantic audit.
+// The page renderer preserves their measured position and typography while
+// exposing them as actual HTML headings rather than styled paragraphs.
+const auditedHeadingIds=new Set([
+ 'pg004_p002','pg005_p002','pg007_p003','pg009_p003','pg011_p002','pg012_p002','pg012_p017','pg014_p002','pg016_p002','pg016_p012','pg018_p011','pg018_p019',
+ 'pg024_p021','pg026_p002','pg027_p002','pg029_p003','pg030_p002','pg031_p002','pg032_p002','pg037_p028','pg038_p002','pg039_p002','pg040_p002','pg041_p016',
+ 'pg042_p027','pg043_p002','pg043_p007','pg043_p018','pg044_p008','pg045_p002','pg047_p002','pg049_p003','pg051_p002','pg052_p002','pg056_p002','pg059_p002',
+ 'pg061_p005','pg064_p010','pg065_p002','pg066_p003','pg071_p009','pg071_p015','pg072_p002','pg074_p002','pg076_p022','pg077_p002','pg078_p003','pg078_p024',
+ 'pg079_p002','pg081_p002','pg082_p002','pg082_p008','pg085_p009','pg085_p030','pg086_p002','pg087_p011','pg088_p002','pg089_p002','pg089_p024','pg090_p002',
+ 'pg090_p013','pg092_p002','pg095_p003','pg097_p002','pg098_p028','pg100_p002','pg100_p010','pg101_p017','pg101_p032','pg102_p002','pg102_p027','pg104_p002',
+ 'pg104_p023','pg107_p007','pg108_p002','pg108_p020','pg110_p025','pg111_p002','pg114_p003','pg116_p002','pg116_p024','pg118_p012','pg118_p024','pg119_p002',
+ 'pg122_p002','pg123_p026','pg124_p016','pg126_p002','pg127_p002','pg128_p008','pg129_p009','pg132_p030','pg133_p002','pg135_p002','pg137_p003','pg138_p002',
+ 'pg139_p002','pg141_p002','pg142_p002','pg142_p007','pg145_p029','pg145_p033','pg146_p002','pg147_p002','pg147_p019','pg149_p012','pg149_p017','pg154_p003',
+ 'pg161_p003','pg162_p002',
+ // Additional source headings flagged as indeterminate by the semantic scan.
+ 'pg001_p000','pg001_p002','pg002_p002','pg009_p023','pg010_p002','pg015_p020','pg019_p002','pg019_p023','pg020_p003','pg020_p020','pg020_p024','pg024_p003',
+ 'pg025_p030','pg029_p026','pg031_p032','pg033_p003','pg036_p003','pg037_p003','pg044_p003','pg049_p027','pg050_p002','pg053_p002','pg057_p003','pg058_p003',
+ 'pg060_p002','pg061_p002','pg062_p002','pg066_p020','pg073_p002','pg078_p010','pg087_p002','pg095_p022','pg099_p002','pg101_p003','pg103_p028','pg105_p002',
+ 'pg106_p003','pg107_p019','pg109_p002','pg114_p010','pg117_p002','pg123_p002','pg124_p002','pg125_p002','pg127_p026','pg128_p002','pg132_p003','pg137_p018',
+ 'pg142_p017','pg144_p003','pg149_p003','pg151_p003','pg156_p002',
+ 'pg001_p001','pg007_p002','pg009_p020','pg020_p002','pg024_p002','pg033_p002','pg036_p002','pg037_p002','pg044_p002','pg057_p002',
+ 'pg058_p002','pg095_p019','pg101_p002','pg106_p002','pg132_p002','pg144_p002','pg149_p002','pg151_p002','pg161_p002','pg001_p004',
+]);
 const storage=createBookStorage('agriculture-form-two',root);
 const measurements=JSON.parse(fs.readFileSync('books/agriculture-form-two/source-line-measurements.json'));
 const tableMeasurements=JSON.parse(fs.readFileSync('books/agriculture-form-two/source-tables.json'));
@@ -113,7 +136,11 @@ try {
    delete line.mergedParagraphId;delete line.blockBounds;delete line.textAlign;
   }
   drawItems.push(...text);
-  const sectioning=sectionFixedLayoutPage({pageId:page.pageId,pageNumber:page.pageNumber,viewport:{width:Math.round(source.pageWidth),height:Math.round(source.pageHeight)},drawItems,availableImageIds:new Set(ids)});
+  // Source-composed panels can carry their words as raster pixels. Keep the
+  // measured text leaves visible as the page's authority and omit those panel
+  // crops, while retaining genuine artwork and diagram regions.
+  const sectioning=sectionFixedLayoutPage({pageId:page.pageId,pageNumber:page.pageNumber,viewport:{width:Math.round(source.pageWidth),height:Math.round(source.pageHeight)},drawItems,availableImageIds:new Set(ids),renderRasterTextAsHtml:true});
+  for(const node of sectioning.sections[0].nodes)if(auditedHeadingIds.has(node.nodeId))node.role='heading';
   storage.putNodeData('fixed-layout-sectioning',page.pageId,sectioning);
   storage.putNodeData('artwork-map',page.pageId,{images:imageMap});
   storage.putNodeData('web-rendering',page.pageId,renderFixedLayoutPage(sectioning.sections[0],'/api/books/agriculture-form-two/images',Math.round(source.pageWidth)));
