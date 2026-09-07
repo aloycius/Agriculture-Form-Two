@@ -206,7 +206,14 @@
     </script>
     <div class="relative z-50" id="interface-container"></div>
     <div class="relative z-50" id="nav-container"></div>
-    <script src="./assets/offline-preloader.js"></script>
+    <script data-adt-runtime="offline-preloader">
+      // The preloader embeds the complete book for file:// readers. Loading it
+      // online adds megabytes of unused JavaScript to every page, so defer it
+      // unless this is a locally opened bundle.
+      if (location.protocol === "file:") {
+        document.write('<script src="./assets/offline-preloader.js"><\/script>')
+      }
+    </script>
     <script src="./assets/scorm.js"></script>
     <script src="./assets/base.bundle.local.js"></script>
 </body>
