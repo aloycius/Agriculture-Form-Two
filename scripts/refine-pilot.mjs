@@ -137,9 +137,35 @@ try {
   }
   drawItems.push(...text);
   // Source-composed panels can carry their words as raster pixels. Keep the
-  // measured text leaves visible as the page's authority and omit those panel
-  // crops, while retaining genuine artwork and diagram regions.
+  // measured text leaves visible as the page's authority. The artwork passed
+  // to this script was rendered with MuPDF text painting disabled, so its
+  // panel crops retain the book's original borders, fills, shadows and icons
+  // without carrying duplicate text pixels.
   const sectioning=sectionFixedLayoutPage({pageId:page.pageId,pageNumber:page.pageNumber,viewport:{width:Math.round(source.pageWidth),height:Math.round(source.pageHeight)},drawItems,availableImageIds:new Set(ids),renderRasterTextAsHtml:true});
+  const section=sectioning.sections[0];
+  const presentImageIds=new Set(section.nodes.filter(node=>node.role==='image').map(node=>node.nodeId));
+  // The generic semantic mode omits image crops that overlap text and
+  // synthesises approximate CSS panels. Restore the source-derived, text-free
+  // crops for this book so each page keeps its exact original scaffolding.
+  for(const item of drawItems){
+   if(item.kind!=='image'||presentImageIds.has(item.imageId)||!ids.includes(item.imageId))continue;
+   section.nodes.push({nodeId:item.imageId,role:'image',isPruned:false});
+   section.placement[item.imageId]={bounds:item.bounds};
+  }
+  // Avoid synthetic fills and tabs: the restored source panel artwork is the
+  // visual layer, while the measured HTML leaves remain the visible text.
+  const sourceTextById=new Map(text.map(item=>[item.textId,item]));
+  for(const node of section.nodes){
+   if(node.role==='image')continue;
+   const placement=section.placement[node.nodeId];
+   const sourceItem=sourceTextById.get(node.nodeId);
+   if(sourceItem&&placement?.position){
+    placement.position.top=sourceItem.top;
+    placement.position.left=sourceItem.left;
+    placement.position.lineHeight=sourceItem.lineHeight;
+   }
+   if(placement){delete placement.htmlPanel;delete placement.htmlTextPanel;}
+  }
   for(const node of sectioning.sections[0].nodes)if(auditedHeadingIds.has(node.nodeId))node.role='heading';
   storage.putNodeData('fixed-layout-sectioning',page.pageId,sectioning);
   storage.putNodeData('artwork-map',page.pageId,{images:imageMap});

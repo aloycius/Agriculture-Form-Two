@@ -23,3 +23,5 @@ audit/comparisons/
 audit/full-comparisons/
 audit/full/*.png
 audit/pilot/*.png
+audit/raster-text-html/
+audit/source-artwork-html/
