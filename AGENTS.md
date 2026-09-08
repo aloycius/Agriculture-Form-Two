@@ -8,8 +8,7 @@ This document describes the structure of this Accessible Digital Textbook (ADT) 
 
 - **Source language**: `en`
 - **Available languages in this bundle**: `en`
-- **Total pages**: 212
-- **Quizzes**: yes
+- **Total pages**: 162
 - **Glossary**: yes
 
 ## Quick Overview
@@ -263,9 +262,6 @@ Every piece of displayable text has a unique, stable **text ID**. This ID is the
 | `pg{NNN}_im{NNN}` | Image alt text / description | `pg001_im001` |
 | `gl{NNN}` | Glossary word | `gl001` |
 | `gl{NNN}_def` | Glossary definition | `gl001_def` |
-| `qz{NNN}_que` | Quiz question | `qz001_que` |
-| `qz{NNN}_o{N}` | Quiz option | `qz001_o0` |
-| `qz{NNN}_o{N}_exp` | Quiz option explanation | `qz001_o0_exp` |
 
 Page/group/text numbers are zero-padded to 3 digits. Quiz option numbers are single digits.
 
@@ -300,10 +296,7 @@ A flat `Record<textId, string>` containing every piece of text in the book. Exam
   "pg001_gp001_tx001": "",
   "pg001_im001": "",
   "gl001": "abattoir",
-  "gl001_def": "a slaughterhouse; a place where animals are killed and prepared for meat",
-  "qz001_que": "What is the first step in crop production mentioned in the text?",
-  "qz001_o0": "1) Planning",
-  "qz001_o0_exp": "✅ Correct! The text says planning is the foremost mental activity in crop production."
+  "gl001_def": "a slaughterhouse; a place where animals are killed and prepared for meat"
 }
 ```
 
@@ -314,8 +307,7 @@ Maps each text ID to its MP3 filename in the `audio/` subdirectory:
 ```json
 {
   "pg001_gp001_tx001": "pg001_gp001_tx001.mp3",
-  "gl001": "gl001.mp3",
-  "qz001_que": "qz001_que.mp3"
+  "gl001": "gl001.mp3"
 }
 ```
 
@@ -366,7 +358,7 @@ Controls which features the reader UI enables. This book's config:
     "state": true,
     "characterDisplay": false,
     "highlight": false,
-    "activities": true
+    "activities": false
   },
   "analytics": {
     "enabled": false,
@@ -419,31 +411,6 @@ Key conventions:
 - **`page-section-id`** meta tag is the 1-based numeric index of this page's position in `pages.json` — the runtime uses this for navigation
 - **Content starts `opacity-0`** — the JS runtime fades it in after loading the interface
 
-## Quiz HTML Structure
-
-Quiz pages use `role="activity"` and embed correct answers in multiple places:
-
-```html
-<section role="activity" data-section-type="activity_quiz" data-id="qz001"
-    data-correct-answers='{"qz001_o0":true,"qz001_o1":false,"qz001_o2":false}'
-    data-option-explanations='{"qz001_o0":"qz001_o0_exp","qz001_o1":"qz001_o1_exp","qz001_o2":"qz001_o2_exp"}'>
-
-    <p data-id="qz001_que">What is the first step in crop production mentioned in the text?</p>
-
-    <label data-activity-item="qz001_o0"
-           data-explanation="✅ Correct! The text says planning is the foremost mental activity in crop production." data-explanation-id="qz001_o0_exp">
-        <input type="radio" name="qz001" value="qz001_o0" class="sr-only" />
-        <span data-id="qz001_o0">1) Planning</span>
-    </label>
-    <!-- more options... -->
-</section>
-
-<!-- Answers also embedded as JSON and in window.correctAnswers -->
-<script type="application/json" id="quiz-correct-answers">{"qz001_o0":true,"qz001_o1":false,"qz001_o2":false}</script>
-<script type="application/json" id="quiz-explanations">{"qz001_o0":"qz001_o0_exp","qz001_o1":"qz001_o1_exp","qz001_o2":"qz001_o2_exp"}</script>
-<script>window.correctAnswers = JSON.parse('{"qz001_o0":true,"qz001_o1":false,"qz001_o2":false}');</script>
-```
-
 ## How to Edit Text
 
 To change text content for a given language, you must update all three locations that reference the text:
@@ -451,17 +418,6 @@ To change text content for a given language, you must update all three locations
 1. **`texts.json`** — Change the value in `content/i18n/{lang}/texts.json` for the text ID.
 2. **The HTML file** — The text also appears inline in the page HTML. Update the inner text of the element with the matching `data-id`. The runtime replaces this on load, but the inline text serves as fallback.
 3. **Audio** (if applicable) — Regenerate the MP3 at `content/i18n/{lang}/audio/{textId}.mp3` and verify `audios.json` maps the text ID to the correct filename.
-
-### Editing Quiz Text
-
-For quiz content, you must additionally update:
-
-- The `data-explanation` attribute on the `<label>` element (inline explanation text)
-- The `data-correct-answers` attribute on the `<section>` element
-- The `data-option-explanations` attribute on the `<section>` element
-- The `<script type="application/json" id="quiz-correct-answers">` block
-- The `<script type="application/json" id="quiz-explanations">` block
-- The `window.correctAnswers` inline script
 
 ### Editing Glossary
 
@@ -509,7 +465,6 @@ Update both:
 | What you need | Where to look |
 |---|---|
 | Rendered page HTML | `adt/pg{NNN}_sec{NNN}.html` |
-| Quiz HTML | `adt/qz{NNN}.html` |
 | Entry point | `adt/index.html` (redirects to first page) |
 | Page images | `adt/images/` |
 | All text content | `adt/content/i18n/{lang}/texts.json` |
@@ -537,9 +492,6 @@ Update both:
 | `pg{NNN}_im{NNN}.mp3` | Image description read-aloud |
 | `gl{NNN}.mp3` | Glossary word pronunciation |
 | `gl{NNN}_def.mp3` | Glossary definition read-aloud |
-| `qz{NNN}_que.mp3` | Quiz question read-aloud |
-| `qz{NNN}_o{N}.mp3` | Quiz option read-aloud |
-| `qz{NNN}_o{N}_exp.mp3` | Quiz explanation read-aloud |
 
 ## Important: What Not to Edit
 
