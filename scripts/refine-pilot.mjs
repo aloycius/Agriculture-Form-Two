@@ -144,11 +144,28 @@ try {
   const sectioning=sectionFixedLayoutPage({pageId:page.pageId,pageNumber:page.pageNumber,viewport:{width:Math.round(source.pageWidth),height:Math.round(source.pageHeight)},drawItems,availableImageIds:new Set(ids),renderRasterTextAsHtml:true});
   const section=sectioning.sections[0];
   const presentImageIds=new Set(section.nodes.filter(node=>node.role==='image').map(node=>node.nodeId));
+  const isCssRebuiltPanel=(item)=>item.kind==='image'&&text.some(paragraph=>
+    /^\s*(?:activity|exercise)\b/i.test(paragraph.text)&&
+    paragraph.left>=item.bounds.x&&
+    paragraph.left<=item.bounds.x+item.bounds.width&&
+    paragraph.top+paragraph.lineHeight/2>=item.bounds.y&&
+    paragraph.top+paragraph.lineHeight/2<=item.bounds.y+item.bounds.height,
+  );
+  const isInsideCssRebuiltPanel=(paragraph)=>drawItems.some(item=>
+    isCssRebuiltPanel(item)&&
+    paragraph.left>=item.bounds.x&&
+    paragraph.left<=item.bounds.x+item.bounds.width&&
+    paragraph.top+paragraph.lineHeight/2>=item.bounds.y&&
+    paragraph.top+paragraph.lineHeight/2<=item.bounds.y+item.bounds.height,
+  );
   // The generic semantic mode omits image crops that overlap text and
   // synthesises approximate CSS panels. Restore the source-derived, text-free
   // crops for this book so each page keeps its exact original scaffolding.
   for(const item of drawItems){
-   if(item.kind!=='image'||presentImageIds.has(item.imageId)||!ids.includes(item.imageId))continue;
+   // Activity and Exercise cards are the exception: rebuild their complete
+   // frames in CSS, including the title tab, so no part of their content is
+   // represented by an image.
+   if(item.kind!=='image'||presentImageIds.has(item.imageId)||!ids.includes(item.imageId)||isCssRebuiltPanel(item))continue;
    section.nodes.push({nodeId:item.imageId,role:'image',isPruned:false});
    section.placement[item.imageId]={bounds:item.bounds};
   }
@@ -164,7 +181,17 @@ try {
     placement.position.left=sourceItem.left;
     placement.position.lineHeight=sourceItem.lineHeight;
    }
-   if(placement){delete placement.htmlPanel;delete placement.htmlTextPanel;}
+   if(placement){
+    // Keep the renderer's source-derived CSS card for Activity and Exercise
+    // labels; other panels use their restored artwork background.
+    if(!sourceItem||!/^\s*(?:activity|exercise)\b/i.test(sourceItem.text))delete placement.htmlPanel;
+    // A later white section title can share an activity crop. Keep its CSS
+    // tab too, otherwise its white source text would sit on the page's white
+    // background after the image crop is removed.
+    const isSharedPanelHeading=sourceItem&&isInsideCssRebuiltPanel(sourceItem)&&
+      /^[A-Za-z]/.test(sourceItem.text.trim())&&!/^\s*(?:activity|exercise)\b/i.test(sourceItem.text);
+    if(!isSharedPanelHeading)delete placement.htmlTextPanel;
+   }
   }
   for(const node of sectioning.sections[0].nodes)if(auditedHeadingIds.has(node.nodeId))node.role='heading';
   storage.putNodeData('fixed-layout-sectioning',page.pageId,sectioning);
